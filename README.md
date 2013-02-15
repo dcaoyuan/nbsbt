@@ -16,7 +16,7 @@ This project is derivated from [https://github.com/typesafehub/sbteclipse](https
 
         addSbtPlugin("org.netbeans.nbsbt" % "nbsbt-plugin" % "1.0.0")
 
-1. In sbt, you can use the command "netbeans" to generate NetBeans project files:
+1. In sbt, you can use the command "netbeans" to generate NetBeans project files (Note: run this command under the top project):
 
         > netbeans
 
