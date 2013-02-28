@@ -121,6 +121,7 @@ private object NetBeans extends NetBeansSDTConfig {
         (classpathTransformerFactories(ref, state) map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
         (projectTransformerFactories(ref, state) map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
         name(ref, state) |@|
+        projectId(ref, state) |@|
         buildDirectory(state) |@|
         baseDirectory(ref, state) |@|
         mapConfigurations(configs, config => srcDirectories(ref, createSrc(ref, state)(config), netbeansOutput(ref, state)(config), state)(config)) |@|
@@ -184,6 +185,7 @@ private object NetBeans extends NetBeansSDTConfig {
       classpathTransformers: Seq[RewriteRule],
       projectTransformers: Seq[RewriteRule],
       name: String,
+      projectId: String,
       buildDirectory: File,
       baseDirectory: File,
       srcDirectories: Seq[(Configuration, Seq[(File, File)])],
@@ -198,6 +200,7 @@ private object NetBeans extends NetBeansSDTConfig {
       cp <- classpath(
         classpathEntryTransformer,
         name,
+        projectId,
         buildDirectory,
         baseDirectory,
         relativizeLibs,
@@ -233,6 +236,7 @@ private object NetBeans extends NetBeansSDTConfig {
   def classpath(
     classpathEntryTransformer: Seq[NetBeansClasspathEntry] => Seq[NetBeansClasspathEntry],
     name: String,
+    projectId: String,
     buildDirectory: File,
     baseDirectory: File,
     relativizeLibs: Boolean,
@@ -252,7 +256,7 @@ private object NetBeans extends NetBeansSDTConfig {
         (if (genNetBeans) (projectAggregate map aggProjectEntry(baseDirectory, state)) else Seq()) ++
         (Seq(jreContainer) map NetBeansClasspathEntry.Con) ++
         (Seq("bin") map NetBeansClasspathEntry.Output)
-      if (genNetBeans) <classpath name={ name }>{ classpathEntryTransformer(entries) map (_.toXmlNetBeans) }</classpath>
+      if (genNetBeans) <classpath name={ name } id={ projectId }>{ classpathEntryTransformer(entries) map (_.toXmlNetBeans) }</classpath>
       else <classpath>{ classpathEntryTransformer(entries) map (_.toXml) }</classpath>
     }
   }
@@ -333,10 +337,10 @@ private object NetBeans extends NetBeansSDTConfig {
   // Getting and transforming mandatory settings and task results
 
   def name(ref: Reference, state: State): Validation[String] =
-    if (setting(NetBeansKeys.useProjectId in ref, state).fold(_ => false, id))
-      setting(Keys.thisProject in ref, state) map (_.id)
-    else
-      setting(Keys.name in ref, state)
+    setting(Keys.name in ref, state)
+
+  def projectId(ref: Reference, state: State): Validation[String] =
+    setting(Keys.thisProject in ref, state) map (_.id)
 
   def buildDirectory(state: State): Validation[File] =
     setting(Keys.baseDirectory in ThisBuild, state)
