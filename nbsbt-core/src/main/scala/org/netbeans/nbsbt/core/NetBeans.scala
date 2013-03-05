@@ -441,7 +441,7 @@ private object NetBeans extends NetBeansSDTConfig {
         val dependencyRef = dependency.project
         val name = setting(Keys.name in dependencyRef, state)
         val baseDir = setting(Keys.baseDirectory in dependencyRef, state)
-        val classDir = setting(Keys.classDirectory in (dependencyRef, configuration), state) fold (f => f.fail, s => success(Option(s)))
+        val classDir = setting(Keys.classDirectory in (dependencyRef, Configurations.Compile), state) fold (f => f.fail, s => success(Option(s)))
         (name |@| baseDir |@| classDir)(Prj)
     }
     val projectDependenciesSeq = projectDependencies.sequence
