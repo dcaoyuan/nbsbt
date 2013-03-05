@@ -306,6 +306,7 @@ private object NetBeans extends NetBeansSDTConfig {
     state: State)(
       prj: Prj): NetBeansClasspathEntry.Project = {
     NetBeansClasspathEntry.Project(
+      config.name,
       prj.name,
       prj.baseDirectory.getAbsolutePath,
       prj.classDirectory map (_.getAbsolutePath) getOrElse ""

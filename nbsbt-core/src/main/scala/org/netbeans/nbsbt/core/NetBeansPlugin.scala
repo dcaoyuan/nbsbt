@@ -171,11 +171,11 @@ trait NetBeansPlugin {
         )
     }
 
-    case class Project(name: String, path: String, output: String) extends NetBeansClasspathEntry {
+    case class Project(scope: String, name: String, path: String, output: String) extends NetBeansClasspathEntry {
       override def toXml =
         <classpathentry kind="src" path={ "/" + name } exported="true" combineaccessrules="false"/>
       override def toXmlNetBeans =
-        <classpathentry kind="src" path={ name } exported="true" combineaccessrules="false" base={ path } output={ output }/>
+        <classpathentry kind="src" path={ name } exported="true" combineaccessrules="false" base={ path } output={ output } scope={ scope }/>
     }
 
     case class AggProject(name: String, path: String) extends NetBeansClasspathEntry {
