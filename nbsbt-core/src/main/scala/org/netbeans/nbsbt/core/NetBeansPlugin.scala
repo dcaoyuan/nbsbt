@@ -155,9 +155,9 @@ trait NetBeansPlugin {
 
   object NetBeansClasspathEntry {
 
-    case class Src(scope: String, path: String, output: String) extends NetBeansClasspathEntry {
+    case class Src(scope: String, path: String, output: String, managed: Boolean) extends NetBeansClasspathEntry {
       override def toXml = <classpathentry kind="src" path={ path } output={ output }/>
-      override def toXmlNetBeans = <classpathentry kind="src" path={ path } output={ output } scope={ scope }/>
+      override def toXmlNetBeans = <classpathentry kind="src" path={ path } output={ output } scope={ scope } managed={ managed.toString }/>
     }
 
     case class Lib(scope: String, path: String, sourcePath: Option[String] = None) extends NetBeansClasspathEntry {
@@ -207,6 +207,8 @@ trait NetBeansPlugin {
     val Resource = Value
 
     val Default = ValueSet(Unmanaged, Source)
+
+    val AllSources = ValueSet(Unmanaged, Managed, Source)
 
     val All = ValueSet(Unmanaged, Managed, Source, Resource)
   }

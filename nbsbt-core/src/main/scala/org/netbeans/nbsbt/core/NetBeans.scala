@@ -188,7 +188,7 @@ private object NetBeans extends NetBeansSDTConfig {
       projectId: String,
       buildDirectory: File,
       baseDirectory: File,
-      srcDirectories: Seq[(Configuration, Seq[(File, File)])],
+      srcDirectories: Seq[(Configuration, Seq[(File, File, Boolean)])],
       scalacOptions: Seq[(String, String)],
       externalDependencies: Seq[(Configuration, Seq[Lib])],
       projectDependencies: Seq[(Configuration, Seq[Prj])],
@@ -240,7 +240,7 @@ private object NetBeans extends NetBeansSDTConfig {
     buildDirectory: File,
     baseDirectory: File,
     relativizeLibs: Boolean,
-    srcDirectories: Seq[(Configuration, Seq[(File, File)])],
+    srcDirectories: Seq[(Configuration, Seq[(File, File, Boolean)])],
     externalDependencies: Seq[(Configuration, Seq[Lib])],
     projectDependencies: Seq[(Configuration, Seq[Prj])],
     projectAggregate: Seq[Prj],
@@ -248,7 +248,7 @@ private object NetBeans extends NetBeansSDTConfig {
     genNetBeans: Boolean,
     state: State): IO[Node] = {
     val srcEntriesIoSeq =
-      for ((config, dirs) <- srcDirectories; (dir, output) <- dirs) yield srcEntry(config, baseDirectory, dir, output, genNetBeans, state)
+      for ((config, dirs) <- srcDirectories; (dir, output, managed) <- dirs) yield srcEntry(config, baseDirectory, dir, output, managed, genNetBeans, state)
     for (srcEntries <- srcEntriesIoSeq.sequence) yield {
       val entries = srcEntries ++
         (externalDependencies map { case (config, libs) => libs map libEntry(config, buildDirectory, baseDirectory, relativizeLibs, state) }).flatten ++
@@ -266,6 +266,7 @@ private object NetBeans extends NetBeansSDTConfig {
     baseDirectory: File,
     srcDirectory: File,
     classDirectory: File,
+    managed: Boolean,
     genNetBeans: Boolean,
     state: State): IO[NetBeansClasspathEntry.Src] =
     io {
@@ -273,7 +274,8 @@ private object NetBeans extends NetBeansSDTConfig {
       NetBeansClasspathEntry.Src(
         config.name,
         relativize(baseDirectory, srcDirectory),
-        relativize(baseDirectory, classDirectory)
+        relativize(baseDirectory, classDirectory),
+        managed
       )
     }
 
@@ -357,22 +359,22 @@ private object NetBeans extends NetBeansSDTConfig {
     createSrc: NetBeansCreateSrc.ValueSet,
     netbeansOutput: Option[String],
     state: State)(
-      configuration: Configuration): Validation[Seq[(File, File)]] = {
+      configuration: Configuration): Validation[Seq[(File, File, Boolean)]] = {
     import NetBeansCreateSrc._
     val classDirectory = netbeansOutput match {
       case Some(name) => baseDirectory(ref, state) map (new File(_, name))
       case None => setting(Keys.classDirectory in (ref, configuration), state)
     }
-    def dirs(values: ValueSet, key: SettingKey[Seq[File]]) =
+    def dirs(values: ValueSet, key: SettingKey[Seq[File]], managed: Boolean) =
       if (values subsetOf createSrc)
-        (setting(key in (ref, configuration), state) <**> classDirectory)((sds, cd) => sds map (_ -> cd))
+        (setting(key in (ref, configuration), state) <**> classDirectory)((sds, cd) => sds map (sd => (sd, cd, managed)))
       else
         success(Seq.empty)
     Seq(
-      dirs(ValueSet(Unmanaged, Source), Keys.unmanagedSourceDirectories),
-      dirs(ValueSet(Managed, Source), Keys.managedSourceDirectories),
-      dirs(ValueSet(Unmanaged, Resource), Keys.unmanagedResourceDirectories),
-      dirs(ValueSet(Managed, Resource), Keys.managedResourceDirectories)
+      dirs(ValueSet(Unmanaged, Source), Keys.unmanagedSourceDirectories, false),
+      dirs(ValueSet(Managed, Source), Keys.managedSourceDirectories, true),
+      dirs(ValueSet(Unmanaged, Resource), Keys.unmanagedResourceDirectories, false),
+      dirs(ValueSet(Managed, Resource), Keys.managedResourceDirectories, true)
     ) reduceLeft (_ >>*<< _)
   }
 
@@ -515,7 +517,7 @@ private object NetBeans extends NetBeansSDTConfig {
     )
 
   def createSrc(ref: Reference, state: State)(configuration: Configuration): NetBeansCreateSrc.ValueSet =
-    setting(NetBeansKeys.createSrc in (ref, configuration), state).fold(_ => NetBeansCreateSrc.Default, id)
+    setting(NetBeansKeys.createSrc in (ref, configuration), state).fold(_ => NetBeansCreateSrc.AllSources, id)
 
   def projectFlavor(ref: Reference, state: State) =
     setting(NetBeansKeys.projectFlavor in ref, state).fold(_ => NetBeansProjectFlavor.Scala, id)
