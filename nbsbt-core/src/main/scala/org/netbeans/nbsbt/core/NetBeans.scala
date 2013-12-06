@@ -58,7 +58,8 @@ import scala.xml.{ Node, PrettyPrinter }
 import scala.xml.transform.{ RewriteRule, RuleTransformer }
 import scalaz.{ Failure, NonEmptyList, Success }
 import scalaz.Scalaz._
-import scalaz.effects._
+import scalaz.effect._
+import scalaz.std.tuple._
 
 private object NetBeans extends NetBeansSDTConfig {
   val SettingFormat = """-([^:]*):?(.*)""".r
@@ -76,6 +77,8 @@ private object NetBeans extends NetBeansSDTConfig {
   val JavaBuilder = "org.eclipse.jdt.core.javabuilder"
 
   val JavaNature = "org.eclipse.jdt.core.javanature"
+
+  case class ScopedConfiguration[A](configuration: Configuration, values: Seq[A])
 
   def netbeansCommand(commandName: String): Command =
     Command(commandName)(_ => parser)((state, args) => action(args.toMap, state))
@@ -118,8 +121,8 @@ private object NetBeans extends NetBeansSDTConfig {
     } yield {
       val configs = configurations(ref, state)
       val applic = classpathEntryTransformerFactory(ref, state).createTransformer(ref, state) |@|
-        (classpathTransformerFactories(ref, state) map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
-        (projectTransformerFactories(ref, state) map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
+        (classpathTransformerFactories(ref, state).toList map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
+        (projectTransformerFactories(ref, state).toList map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
         name(ref, state) |@|
         projectId(ref, state) |@|
         buildDirectory(state) |@|
@@ -140,14 +143,14 @@ private object NetBeans extends NetBeansSDTConfig {
         )
       )
     }
-    effects.sequence[Validation, IO[String]] map (_.sequence)
+    effects.toList.sequence[Validation, IO[String]].map((list: List[IO[String]]) => list.toStream.sequence.map(_.toList))
   }
 
   def onFailure(state: State)(errors: NonEmptyList[String]): State = {
     state.log.error(
       "Could not create NetBeans project files:%s%s".format(NewLine, errors.list mkString NewLine)
     )
-    state.fail
+    state
   }
 
   def onSuccess(state: State)(effects: IO[Seq[String]]): State = {
@@ -169,9 +172,9 @@ private object NetBeans extends NetBeansSDTConfig {
 
   def mapConfigurations[A](
     configurations: Seq[Configuration],
-    f: Configuration => Validation[Seq[A]]): Validation[Seq[(Configuration, Seq[A])]] = {
-    def scoped(c: Configuration): Validation[(Configuration, Seq[A])] = f(c) fold (e => e.fail, s => success(c -> s.distinct))
-    (configurations map scoped).sequence
+    f: Configuration => Validation[Seq[A]]): Validation[List[(Configuration, Seq[A])]] = {
+    def scoped(c: Configuration): Validation[(Configuration, Seq[A])] = f(c) fold (e => Failure(e), s => Success((c, s.distinct)))
+    (configurations map scoped).toList.sequence
   }
 
   def handleProject(
@@ -249,7 +252,7 @@ private object NetBeans extends NetBeansSDTConfig {
     state: State): IO[Node] = {
     val srcEntriesIoSeq =
       for ((config, dirs) <- srcDirectories; (dir, output, managed) <- dirs) yield srcEntry(config, baseDirectory, dir, output, managed, genNetBeans, state)
-    for (srcEntries <- srcEntriesIoSeq.sequence) yield {
+    for (srcEntries <- srcEntriesIoSeq.toList.sequence) yield {
       val entries = srcEntries ++
         (externalDependencies map { case (config, libs) => libs map libEntry(config, buildDirectory, baseDirectory, relativizeLibs, state) }).flatten ++
         (projectDependencies map { case (config, prjs) => prjs map projectEntry(config, baseDirectory, state) }).flatten ++
@@ -365,17 +368,17 @@ private object NetBeans extends NetBeansSDTConfig {
       case Some(name) => baseDirectory(ref, state) map (new File(_, name))
       case None => setting(Keys.classDirectory in (ref, configuration), state)
     }
-    def dirs(values: ValueSet, key: SettingKey[Seq[File]], managed: Boolean) =
+    def dirs(values: ValueSet, key: SettingKey[Seq[File]], managed: Boolean): Validation[List[(File, java.io.File, Boolean)]] =
       if (values subsetOf createSrc)
-        (setting(key in (ref, configuration), state) <**> classDirectory)((sds, cd) => sds map (sd => (sd, cd, managed)))
+        (setting(key in (ref, configuration), state) <**> classDirectory)((sds, cd) => sds.toList map (sd => (sd, cd, managed)))
       else
-        success(Seq.empty)
-    Seq(
+        Success(List.empty)
+    List(
       dirs(ValueSet(Unmanaged, Source), Keys.unmanagedSourceDirectories, false),
       dirs(ValueSet(Managed, Source), Keys.managedSourceDirectories, true),
       dirs(ValueSet(Unmanaged, Resource), Keys.unmanagedResourceDirectories, false),
       dirs(ValueSet(Managed, Resource), Keys.managedResourceDirectories, true)
-    ) reduceLeft (_ >>*<< _)
+    ) reduceLeft (_ +++ _)
   }
 
   def scalacOptions(ref: ProjectRef, state: State): Validation[Seq[(String, String)]] =
@@ -443,10 +446,10 @@ private object NetBeans extends NetBeansSDTConfig {
         val dependencyRef = dependency.project
         val name = setting(Keys.name in dependencyRef, state)
         val baseDir = setting(Keys.baseDirectory in dependencyRef, state)
-        val classDir = setting(Keys.classDirectory in (dependencyRef, Configurations.Compile), state) fold (f => f.fail, s => success(Option(s)))
+        val classDir = setting(Keys.classDirectory in (dependencyRef, Configurations.Compile), state) fold (f => Failure(f), s => Success(Option(s)))
         (name |@| baseDir |@| classDir)(Prj)
     }
-    val projectDependenciesSeq = projectDependencies.sequence
+    val projectDependenciesSeq = projectDependencies.toList.sequence
     state.log.debug("Project dependencies for configuration '%s': %s".format(configuration, projectDependenciesSeq))
     projectDependenciesSeq
   }
@@ -460,9 +463,9 @@ private object NetBeans extends NetBeansSDTConfig {
         val prjRef = prj.project
         val name = setting(Keys.name in prjRef, state)
         val baseDir = setting(Keys.baseDirectory in prjRef, state)
-        (name |@| baseDir |@| success(None))(Prj)
+        (name |@| baseDir |@| Success(None))(Prj)
     }
-    val projectsSeq = projects.sequence
+    val projectsSeq = projects.toList.sequence
     state.log.debug("Project aggregate: %s".format(projectsSeq))
     projectsSeq
   }
@@ -560,6 +563,8 @@ private object NetBeans extends NetBeansSDTConfig {
 
   def closeWriter(writer: Writer): IO[Unit] =
     io(writer.close())
+
+  private def io[T](t: => T): IO[T] = scalaz.effect.IO(t)
 
   // Utilities
 
