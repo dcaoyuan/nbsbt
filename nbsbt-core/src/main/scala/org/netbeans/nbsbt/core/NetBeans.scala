@@ -128,7 +128,7 @@ private object NetBeans extends NetBeansSDTConfig {
         baseDirectory(ref, state) |@|
         mapConfigurations(configs, config => srcDirectories(ref, createSrc(ref, state)(config), netbeansOutput(ref, state)(config), state)(config)) |@|
         scalacOptions(ref, state) |@|
-        mapConfigurations(removeExtendedConfigurations(configs), externalDependencies(ref, withSourceArg getOrElse withSource(ref, state), state)) |@|
+        mapConfigurations(configs, externalDependencies(ref, withSourceArg getOrElse withSource(ref, state), state)) |@|
         mapConfigurations(configs, projectDependencies(ref, project, state)) |@|
         projectAggregate(ref, project, state)
       applic(
@@ -143,6 +143,9 @@ private object NetBeans extends NetBeansSDTConfig {
     effects.toList.sequence[Validation, IO[String]].map((list: List[IO[String]]) => list.toStream.sequence.map(_.toList))
   }
 
+  /**
+   * This method will remove 'compile' scope. TODO: what should it do?
+   */
   def removeExtendedConfigurations(configurations: Seq[Configuration]): Seq[Configuration] = {
     def findExtended(configurations: Seq[Configuration], acc: Seq[Configuration] = Nil): Seq[Configuration] = {
       val extended = configurations flatMap (_.extendsConfigs)
@@ -381,7 +384,7 @@ private object NetBeans extends NetBeansSDTConfig {
   def jreContainer(executionEnvironment: Option[NetBeansExecutionEnvironment.Value]): String =
     executionEnvironment match {
       case Some(ee) => "%s/%s/%s".format(JreContainer, StandardVmType, ee)
-      case None => JreContainer
+      case None     => JreContainer
     }
 
   def builderAndNatures(projectFlavor: NetBeansProjectFlavor.Value) =
@@ -416,7 +419,7 @@ private object NetBeans extends NetBeansSDTConfig {
     import NetBeansCreateSrc._
     val classDirectory = netbeansOutput match {
       case Some(name) => baseDirectory(ref, state) map (new File(_, name))
-      case None => setting(Keys.classDirectory in (ref, configuration), state)
+      case None       => setting(Keys.classDirectory in (ref, configuration), state)
     }
     def dirs(values: ValueSet, key: SettingKey[Seq[File]], managed: Boolean): Validation[List[(File, java.io.File, Boolean)]] =
       if (values subsetOf createSrc)
@@ -436,7 +439,7 @@ private object NetBeans extends NetBeansSDTConfig {
         Nil
       else {
         fromScalacToSDT(options) match {
-          case Seq() => Seq()
+          case Seq()   => Seq()
           case options => ("scala.compiler.useProjectSettings" -> "true") +: options
         }
       })
@@ -623,10 +626,10 @@ private object NetBeans extends NetBeansSDTConfig {
     if (filename contains "..") {
       val parts = (filename split "[\\/]+").toList
       def fix(parts: List[String], result: String): String = parts match {
-        case Nil => result
-        case a :: ".." :: rest => fix(rest, result)
+        case Nil                         => result
+        case a :: ".." :: rest           => fix(rest, result)
         case a :: rest if result.isEmpty => fix(rest, a)
-        case a :: rest => fix(rest, result + java.io.File.separator + a)
+        case a :: rest                   => fix(rest, result + java.io.File.separator + a)
       }
       fix(parts, "")
     } else filename
