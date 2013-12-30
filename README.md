@@ -6,6 +6,7 @@ Plugin for sbt to create Netbeans project definition.
 This project is derived from [https://github.com/typesafehub/sbteclipse](https://github.com/typesafehub/sbteclipse)
 
 1. nbsbt requires sbt 0.13+
+
    for sbt 0.12.x, checkout branch 1.0.2-sbt-0.12.x
 
 1. Build and publish-local
