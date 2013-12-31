@@ -41,8 +41,8 @@ object Build extends Build {
       scalacOptions ++= Seq("-unchecked", "-deprecation"),
       publishTo <<= isSnapshot { isSnapshot =>
         val id = if (isSnapshot) "snapshots" else "releases"
-        val uri = "https://typesafe.artifactoryonline.com/typesafe/ivy-" + id
-        Some(Resolver.url("typesafe-" + id, url(uri))(Resolver.ivyStylePatterns))
+        val uri = "http://repo.scala-sbt.org/scalasbt/sbt-plugin-" + id
+        Some(Resolver.url("sbt-plugin-" + id, url(uri))(Resolver.ivyStylePatterns))
       },
       sbtPlugin := true,
       publishMavenStyle := false,
