@@ -36,7 +36,6 @@ object Build extends Build {
     releaseSettings ++
     Seq(
       crossScalaVersions := Seq("2.9.2", "2.10.3"),
-      //scalaVersion := "2.9.2",
       organization := "org.netbeans.nbsbt",
       // version is defined in version.sbt in order to support sbt-release
       scalacOptions ++= Seq("-unchecked", "-deprecation"),
