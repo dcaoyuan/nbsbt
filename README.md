@@ -11,8 +11,19 @@ This project is derived from [https://github.com/typesafehub/sbteclipse](https:/
 
 1. Build and publish-local
 
+        // for master branch
         cd nbsbt
-        sbt clean compile publish-local
+        sbt
+        > clean
+        > compile
+        > publish-local 
+        
+	// for 1.0.2-sbt-0.12.x branch
+        cd nbsbt
+        sbt 
+        > + clean 
+        > + compile 
+        > + publish-local
 
 1. Add nbsbt to your plugin definition file. You can use either the global one at ~/.sbt/0.13/plugins/plugins.sbt or the project-specific one at PROJECT_DIR/project/plugins.sbt:
 
