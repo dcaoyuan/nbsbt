@@ -564,7 +564,7 @@ private object NetBeans extends NetBeansSDTConfig {
       _.toSeq)
 
   def createSrc(ref: Reference, state: State)(configuration: Configuration): NetBeansCreateSrc.ValueSet =
-    setting(NetBeansKeys.createSrc in (ref, configuration), state).fold(_ => NetBeansCreateSrc.AllSources, id)
+    setting(NetBeansKeys.createSrc in (ref, configuration), state).fold(_ => NetBeansCreateSrc.All, id)
 
   def projectFlavor(ref: Reference, state: State) =
     setting(NetBeansKeys.projectFlavor in ref, state).fold(_ => NetBeansProjectFlavor.Scala, id)
