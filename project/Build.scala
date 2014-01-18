@@ -11,24 +11,19 @@ object Build extends Build {
     file("."),
     aggregate = Seq(nbsbtCore, nbsbtPlugin),
     settings = commonSettings ++ Seq(
-      publishArtifact := false
-    )
-  )
+      publishArtifact := false))
 
   lazy val nbsbtCore = Project(
     "nbsbt-core",
     file("nbsbt-core"),
     settings = commonSettings ++ Seq(
-      libraryDependencies ++= Seq("org.scalaz" %% "scalaz-core" % "6.0.4")
-    )
-  )
+      libraryDependencies ++= Seq("org.scalaz" %% "scalaz-core" % "6.0.4")))
 
   lazy val nbsbtPlugin = Project(
     "nbsbt-plugin",
     file("nbsbt-plugin"),
     dependencies = Seq(nbsbtCore),
-    settings = commonSettings
-  )
+    settings = commonSettings)
 
   def commonSettings = Defaults.defaultSettings ++
     scalariformSettings ++
@@ -48,6 +43,5 @@ object Build extends Build {
       publishMavenStyle := false,
       publishArtifact in (Compile, packageDoc) := false,
       publishArtifact in (Compile, packageSrc) := false,
-      scriptedLaunchOpts += "-Xmx1024m"
-    )
+      scriptedLaunchOpts += "-Xmx1024m")
 }
