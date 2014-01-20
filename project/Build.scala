@@ -46,6 +46,7 @@ object Build extends Build {
       val uri = "http://repo.scala-sbt.org/scalasbt/sbt-plugin-" + id
       Some(Resolver.url("sbt-plugin-" + id, url(uri))(Resolver.ivyStylePatterns))
     },
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     sbtPlugin := true,
     publishMavenStyle := false,
     sbtVersion in GlobalScope <<= (sbtVersion in GlobalScope) { sbtVersion =>
