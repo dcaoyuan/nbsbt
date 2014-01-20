@@ -30,7 +30,7 @@ object Build extends Build {
     scriptedSettings ++
     releaseSettings ++
     Seq(
-      crossScalaVersions := Seq("2.9.2", "2.10.3"),
+      scalaVersion := "2.10.3",
       organization := "org.netbeans.nbsbt",
       // version is defined in version.sbt in order to support sbt-release
       scalacOptions ++= Seq("-unchecked", "-deprecation"),
@@ -39,6 +39,7 @@ object Build extends Build {
         val uri = "http://repo.scala-sbt.org/scalasbt/sbt-plugin-" + id
         Some(Resolver.url("sbt-plugin-" + id, url(uri))(Resolver.ivyStylePatterns))
       },
+      credentials += Credentials(Path.userHome / ".ivy2" / ".credentials_sbt12"),
       sbtPlugin := true,
       publishMavenStyle := false,
       publishArtifact in (Compile, packageDoc) := false,
