@@ -9,6 +9,10 @@ This project is derived from [https://github.com/typesafehub/sbteclipse](https:/
 
    for sbt 0.12.x, checkout branch 1.0.2-sbt-0.12.x
 
+1. Changelog:
+
+   1.1.2: Extracted scalariform preferences for NetBeans's formatter.
+
 1. Build and publish-local
 
         // for master branch
@@ -28,7 +32,7 @@ This project is derived from [https://github.com/typesafehub/sbteclipse](https:/
 1. Add nbsbt to your plugin definition file. You can use either the global one at ~/.sbt/0.13/plugins/plugins.sbt or the project-specific one at PROJECT_DIR/project/plugins.sbt:
 
         // for sbt 0.13.x
-        addSbtPlugin("org.netbeans.nbsbt" % "nbsbt-plugin" % "1.1.0")
+        addSbtPlugin("org.netbeans.nbsbt" % "nbsbt-plugin" % "1.1.2")
         // for sbt 0.12.x
         addSbtPlugin("org.netbeans.nbsbt" % "nbsbt-plugin" % "1.0.2")
 
