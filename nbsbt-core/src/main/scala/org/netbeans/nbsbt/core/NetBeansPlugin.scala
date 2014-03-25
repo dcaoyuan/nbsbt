@@ -193,9 +193,9 @@ trait NetBeansPlugin {
 
     case class ScalariformEntry(k: String, v: Any) extends NetBeansClasspathEntry {
       def toXml =
-        <scalariform key={ k }>{ v }</scalariform>
+        <scalariform key={ k } value={ "" + v }/>
       def toXmlNetBeans =
-        <scalariform key={ k }>{ v }</scalariform>
+        <scalariform key={ k } value={ "" + v }/>
     }
   }
 
