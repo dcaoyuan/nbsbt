@@ -60,6 +60,9 @@ import scalaz.{ Failure, NonEmptyList, Success }
 import scalaz.Scalaz._
 import scalaz.effect._
 import scalaz.std.tuple._
+import com.typesafe.sbt.SbtScalariform._
+import scalariform.formatter.preferences.FormattingPreferences
+import scalariform.formatter.preferences.IFormattingPreferences
 
 private object NetBeans extends NetBeansSDTConfig {
   val SettingFormat = """-([^:]*):?(.*)""".r
@@ -119,26 +122,43 @@ private object NetBeans extends NetBeansSDTConfig {
       project <- Project.getProject(ref, structure(state)) if !skip(ref, project, skipParents, state)
     } yield {
       val configs = configurations(ref, state)
-      val applic = classpathEntryTransformerFactory(ref, state).createTransformer(ref, state) |@|
-        (classpathTransformerFactories(ref, state).toList map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
-        (projectTransformerFactories(ref, state).toList map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule] |@|
-        name(ref, state) |@|
-        projectId(ref, state) |@|
-        buildDirectory(state) |@|
-        baseDirectory(ref, state) |@|
-        mapConfigurations(configs, config => srcDirectories(ref, createSrc(ref, state)(config), netbeansOutput(ref, state)(config), state)(config)) |@|
-        scalacOptions(ref, state) |@|
-        mapConfigurations(configs, externalDependencies(ref, withSourceArg getOrElse withSource(ref, state), state)) |@|
-        mapConfigurations(configs, projectDependencies(ref, project, state)) |@|
-        projectAggregate(ref, project, state)
-      applic(
+
+      for {
+        classpathEntryTransformer <- classpathEntryTransformerFactory(ref, state).createTransformer(ref, state)
+        classpathTransformers <- (classpathTransformerFactories(ref, state).toList map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule]
+        projectTransformers <- (projectTransformerFactories(ref, state).toList map (_.createTransformer(ref, state))).sequence[Validation, RewriteRule]
+        name <- name(ref, state)
+        projectId <- projectId(ref, state)
+        buildDirectory <- buildDirectory(state)
+        baseDirectory <- baseDirectory(ref, state)
+        srcDirectories <- mapConfigurations(configs, config => srcDirectories(ref, createSrc(ref, state)(config), netbeansOutput(ref, state)(config), state)(config))
+        scalacOptions <- scalacOptions(ref, state)
+        scalariformPreferences <- scalariformPreferences(ref, state)
+        externalDependencies <- mapConfigurations(configs, externalDependencies(ref, withSourceArg getOrElse withSource(ref, state), state))
+        projectDependencies <- mapConfigurations(configs, projectDependencies(ref, project, state))
+        projectAggregate <- projectAggregate(ref, project, state)
+      } yield {
         handleProject(
           jreContainer(executionEnvironmentArg orElse executionEnvironment(ref, state)),
           preTasks(ref, state),
           relativizeLibs(ref, state),
           builderAndNatures(projectFlavor(ref, state)),
           genNetBeans,
-          state))
+          state)(
+            classpathEntryTransformer,
+            classpathTransformers,
+            projectTransformers,
+            name,
+            projectId,
+            buildDirectory,
+            baseDirectory,
+            srcDirectories,
+            scalacOptions,
+            scalariformPreferences,
+            externalDependencies,
+            projectDependencies,
+            projectAggregate)
+      }
     }
     effects.toList.sequence[Validation, IO[String]].map((list: List[IO[String]]) => list.toStream.sequence.map(_.toList))
   }
@@ -201,6 +221,7 @@ private object NetBeans extends NetBeansSDTConfig {
       baseDirectory: File,
       srcDirectories: Seq[(Configuration, Seq[(File, File, Boolean)])],
       scalacOptions: Seq[(String, String)],
+      scalariformPreferences: IFormattingPreferences,
       externalDependencies: Seq[(Configuration, Seq[Lib])],
       projectDependencies: Seq[(Configuration, Seq[Prj])],
       projectAggregate: Seq[Prj]): IO[String] = {
@@ -221,6 +242,7 @@ private object NetBeans extends NetBeansSDTConfig {
         projectDependencies,
         projectAggregate,
         jreContainer,
+        scalariformPreferences,
         genNetBeans,
         state)
       _ <- if (genNetBeans) saveXml(baseDirectory / ".classpath_nb", cp) else saveXml(baseDirectory / ".classpath", new RuleTransformer(classpathTransformers: _*)(cp))
@@ -283,6 +305,7 @@ private object NetBeans extends NetBeansSDTConfig {
     projectDependencies: Seq[(Configuration, Seq[Prj])],
     projectAggregate: Seq[Prj],
     jreContainer: String,
+    scalariformPreferences: IFormattingPreferences,
     genNetBeans: Boolean,
     state: State): IO[Node] = {
     val srcEntriesIoSeq =
@@ -298,7 +321,8 @@ private object NetBeans extends NetBeansSDTConfig {
         (projectDependencies map { case (config, prjs) => prjs map projectEntry(config, baseDirectory, state) }).flatten ++
         (if (genNetBeans) (projectAggregate map aggProjectEntry(baseDirectory, state)) else Seq()) ++
         (Seq(jreContainer) map NetBeansClasspathEntry.Con) ++
-        (Seq("bin") map NetBeansClasspathEntry.Output)
+        (Seq("bin") map NetBeansClasspathEntry.Output) ++
+        (scalariformPreferences.preferencesMap map { case (k, v) => NetBeansClasspathEntry.ScalariformEntry(k.key, v) })
       if (genNetBeans) <classpath name={ name } id={ projectId }>{ classpathEntryTransformer(entries) map (_.toXmlNetBeans) }</classpath>
       else <classpath>{ classpathEntryTransformer(entries) map (_.toXml) }</classpath>
     }
@@ -443,6 +467,13 @@ private object NetBeans extends NetBeansSDTConfig {
           case options => ("scala.compiler.useProjectSettings" -> "true") +: options
         }
       })
+
+  def scalariformPreferences(ref: ProjectRef, state: State): Validation[IFormattingPreferences] = {
+    (ScalariformKeys.preferences in ref) get structure(state).data match {
+      case Some(a) => a.success
+      case None => FormattingPreferences.success
+    }
+  }
 
   def externalDependencies(
     ref: ProjectRef,

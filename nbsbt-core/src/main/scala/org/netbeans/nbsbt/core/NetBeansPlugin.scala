@@ -34,6 +34,7 @@ import sbt.Keys.{ baseDirectory, commands }
 import scala.util.control.Exception
 import scala.xml.{ Attribute, Elem, MetaData, Node, Null, Text }
 import scala.xml.transform.RewriteRule
+import scalariform.formatter.preferences.IFormattingPreferences
 
 object NetBeansPlugin extends NetBeansPlugin
 
@@ -140,46 +141,61 @@ trait NetBeansPlugin {
   object NetBeansClasspathEntry {
 
     case class Src(scope: String, path: String, output: String, managed: Boolean) extends NetBeansClasspathEntry {
-      override def toXml = <classpathentry kind="src" path={ path } output={ output }/>
-      override def toXmlNetBeans = <classpathentry kind="src" path={ path } output={ output } scope={ scope } managed={ managed.toString }/>
+      def toXml =
+        <classpathentry kind="src" path={ path } output={ output }/>
+      def toXmlNetBeans =
+        <classpathentry kind="src" path={ path } output={ output } scope={ scope } managed={ managed.toString }/>
     }
 
     case class Link(scope: String, name: String, output: String, managed: Boolean) extends NetBeansClasspathEntry {
-      override def toXml = <classpathentry kind="link" name={ name } output={ output }/>
-      override def toXmlNetBeans = <classpathentry kind="src" name={ name } output={ output } scope={ scope } managed={ managed.toString }/>
+      def toXml =
+        <classpathentry kind="link" name={ name } output={ output }/>
+      def toXmlNetBeans =
+        <classpathentry kind="src" name={ name } output={ output } scope={ scope } managed={ managed.toString }/>
     }
 
     case class Lib(scope: String, path: String, sourcePath: Option[String] = None) extends NetBeansClasspathEntry {
-      override def toXml =
+      def toXml =
         sourcePath.foldLeft(<classpathentry kind="lib" path={ path }/>)((xml, sp) =>
           xml % Attribute("sourcepath", Text(sp), Null))
-      override def toXmlNetBeans =
+      def toXmlNetBeans =
         sourcePath.foldLeft(<classpathentry kind="lib" path={ path } scope={ scope }/>)((xml, sp) =>
           xml % Attribute("sourcepath", Text(sp), Null))
     }
 
     case class Project(scope: String, name: String, path: String, output: String) extends NetBeansClasspathEntry {
-      override def toXml =
+      def toXml =
         <classpathentry kind="src" path={ "/" + name } exported="true" combineaccessrules="false"/>
-      override def toXmlNetBeans =
+      def toXmlNetBeans =
         <classpathentry kind="src" path={ name } exported="true" combineaccessrules="false" base={ path } output={ output } scope={ scope }/>
     }
 
     case class AggProject(name: String, path: String) extends NetBeansClasspathEntry {
-      override def toXml =
+      def toXml =
         <classpathentry kind="agg" path={ "/" + name }/>
-      override def toXmlNetBeans =
+      def toXmlNetBeans =
         <classpathentry kind="agg" path={ name } base={ path }/>
     }
 
     case class Con(path: String) extends NetBeansClasspathEntry {
-      override def toXml = <classpathentry kind="con" path={ path }/>
-      override def toXmlNetBeans = <classpathentry kind="con" path={ path }/>
+      def toXml =
+        <classpathentry kind="con" path={ path }/>
+      def toXmlNetBeans =
+        <classpathentry kind="con" path={ path }/>
     }
 
     case class Output(path: String) extends NetBeansClasspathEntry {
-      override def toXml = <classpathentry kind="output" path={ path }/>
-      override def toXmlNetBeans = <classpathentry kind="output" path={ path }/>
+      def toXml =
+        <classpathentry kind="output" path={ path }/>
+      def toXmlNetBeans =
+        <classpathentry kind="output" path={ path }/>
+    }
+
+    case class ScalariformEntry(k: String, v: Any) extends NetBeansClasspathEntry {
+      def toXml =
+        <scalariform key={ k }>{ v }</scalariform>
+      def toXmlNetBeans =
+        <scalariform key={ k }>{ v }</scalariform>
     }
   }
 
