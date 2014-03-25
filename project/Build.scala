@@ -2,7 +2,8 @@ import sbt._
 import sbt.Keys._
 import sbt.ScriptedPlugin._
 import sbtrelease.ReleasePlugin._
-import com.typesafe.sbt.SbtScalariform._
+import com.typesafe.sbt.SbtScalariform
+import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
 object Build extends Build {
 
@@ -30,7 +31,7 @@ object Build extends Build {
 
   def commonSettings =
     Defaults.defaultSettings ++
-      scalariformSettings ++
+      formatSettings ++
       scriptedSettings ++
       releaseSettings ++
       Seq(
@@ -64,4 +65,18 @@ object Build extends Build {
         publishArtifact in (Compile, packageSrc) := false,
         scriptedLaunchOpts ++= List("-Xmx1024m", "-XX:MaxPermSize=256M"))
 
+  lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
+    ScalariformKeys.preferences in Compile := formattingPreferences,
+    ScalariformKeys.preferences in Test    := formattingPreferences
+
+  )
+
+  import scalariform.formatter.preferences._
+  def formattingPreferences =
+    FormattingPreferences()
+      .setPreference(RewriteArrowSymbols, false)
+      .setPreference(AlignParameters, true)
+      .setPreference(AlignSingleLineCaseStatements, true)
+      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(IndentSpaces, 2)
 }

@@ -63,14 +63,14 @@ package object core {
   def setting[A](key: SettingKey[A], state: State): Validation[A] =
     key get structure(state).data match {
       case Some(a) => a.success
-      case None => "Undefined setting '%s'!".format(key.key).failNel
+      case None    => "Undefined setting '%s'!".format(key.key).failNel
     }
 
   def evaluateTask[A](key: TaskKey[A], ref: ProjectRef, state: State): Validation[A] =
     EvaluateTask(structure(state), key, state, ref, EvaluateTask defaultConfig state) match {
       case Some((_, Value(a))) => a.success
       case Some((_, Inc(inc))) => "Error evaluating task '%s': %s".format(key.key, Incomplete.show(inc.tpe)).failNel
-      case None => "Undefined task '%s' for '%s'!".format(key.key, ref.project).failNel
+      case None                => "Undefined task '%s' for '%s'!".format(key.key, ref.project).failNel
     }
 
   def extracted(state: State): Extracted = Project.extract(state)

@@ -57,12 +57,12 @@ import sbt.complete.Parser
 import scala.xml.{ Node, PrettyPrinter }
 import scala.xml.transform.{ RewriteRule, RuleTransformer }
 import scalaz.{ Failure, NonEmptyList, Success }
+import scalariform.formatter.preferences.PreferenceDescriptor
 import scalaz.Scalaz._
 import scalaz.effect._
 import scalaz.std.tuple._
 import com.typesafe.sbt.SbtScalariform._
 import scalariform.formatter.preferences.FormattingPreferences
-import scalariform.formatter.preferences.IFormattingPreferences
 
 private object NetBeans extends NetBeansSDTConfig {
   val SettingFormat = """-([^:]*):?(.*)""".r
@@ -133,7 +133,7 @@ private object NetBeans extends NetBeansSDTConfig {
         baseDirectory <- baseDirectory(ref, state)
         srcDirectories <- mapConfigurations(configs, config => srcDirectories(ref, createSrc(ref, state)(config), netbeansOutput(ref, state)(config), state)(config))
         scalacOptions <- scalacOptions(ref, state)
-        scalariformPreferences <- scalariformPreferences(ref, state)
+        scalariformPreferences <- mapConfigurations(configs, scalariformPreferences(ref, state))
         externalDependencies <- mapConfigurations(configs, externalDependencies(ref, withSourceArg getOrElse withSource(ref, state), state))
         projectDependencies <- mapConfigurations(configs, projectDependencies(ref, project, state))
         projectAggregate <- projectAggregate(ref, project, state)
@@ -221,7 +221,7 @@ private object NetBeans extends NetBeansSDTConfig {
       baseDirectory: File,
       srcDirectories: Seq[(Configuration, Seq[(File, File, Boolean)])],
       scalacOptions: Seq[(String, String)],
-      scalariformPreferences: IFormattingPreferences,
+      scalariformPreferences: Seq[(Configuration, Seq[(PreferenceDescriptor[_], Any)])],
       externalDependencies: Seq[(Configuration, Seq[Lib])],
       projectDependencies: Seq[(Configuration, Seq[Prj])],
       projectAggregate: Seq[Prj]): IO[String] = {
@@ -305,7 +305,7 @@ private object NetBeans extends NetBeansSDTConfig {
     projectDependencies: Seq[(Configuration, Seq[Prj])],
     projectAggregate: Seq[Prj],
     jreContainer: String,
-    scalariformPreferences: IFormattingPreferences,
+    scalariformPreferences: Seq[(Configuration, Seq[(PreferenceDescriptor[_], Any)])],
     genNetBeans: Boolean,
     state: State): IO[Node] = {
     val srcEntriesIoSeq =
@@ -322,7 +322,7 @@ private object NetBeans extends NetBeansSDTConfig {
         (if (genNetBeans) (projectAggregate map aggProjectEntry(baseDirectory, state)) else Seq()) ++
         (Seq(jreContainer) map NetBeansClasspathEntry.Con) ++
         (Seq("bin") map NetBeansClasspathEntry.Output) ++
-        (scalariformPreferences.preferencesMap map { case (k, v) => NetBeansClasspathEntry.ScalariformEntry(k.key, v) })
+        (scalariformPreferences map { case (config, prefs) => prefs map { case (k, v) => NetBeansClasspathEntry.ScalariformEntry(config.name, k.key, v) } }).flatten
       if (genNetBeans) <classpath name={ name } id={ projectId }>{ classpathEntryTransformer(entries) map (_.toXmlNetBeans) }</classpath>
       else <classpath>{ classpathEntryTransformer(entries) map (_.toXml) }</classpath>
     }
@@ -408,7 +408,7 @@ private object NetBeans extends NetBeansSDTConfig {
   def jreContainer(executionEnvironment: Option[NetBeansExecutionEnvironment.Value]): String =
     executionEnvironment match {
       case Some(ee) => "%s/%s/%s".format(JreContainer, StandardVmType, ee)
-      case None => JreContainer
+      case None     => JreContainer
     }
 
   def builderAndNatures(projectFlavor: NetBeansProjectFlavor.Value) =
@@ -443,7 +443,7 @@ private object NetBeans extends NetBeansSDTConfig {
     import NetBeansCreateSrc._
     val classDirectory = netbeansOutput match {
       case Some(name) => baseDirectory(ref, state) map (new File(_, name))
-      case None => setting(Keys.classDirectory in (ref, configuration), state)
+      case None       => setting(Keys.classDirectory in (ref, configuration), state)
     }
     def dirs(values: ValueSet, key: SettingKey[Seq[File]], managed: Boolean): Validation[List[(File, java.io.File, Boolean)]] =
       if (values subsetOf createSrc)
@@ -463,15 +463,20 @@ private object NetBeans extends NetBeansSDTConfig {
         Nil
       else {
         fromScalacToSDT(options) match {
-          case Seq() => Seq()
+          case Seq()   => Seq()
           case options => ("scala.compiler.useProjectSettings" -> "true") +: options
         }
       })
 
-  def scalariformPreferences(ref: ProjectRef, state: State): Validation[IFormattingPreferences] = {
-    (ScalariformKeys.preferences in ref) get structure(state).data match {
-      case Some(a) => a.success
-      case None => FormattingPreferences.success
+  /**
+   * sbt command:
+   *   > show compile:scalariformPreferences
+   */
+  def scalariformPreferences(ref: ProjectRef, state: State)(
+    configuration: Configuration): Validation[Seq[(PreferenceDescriptor[_], Any)]] = {
+    (ScalariformKeys.preferences in (ref, configuration)) get structure(state).data match {
+      case Some(a) => a.preferencesMap.toList.success
+      case None    => FormattingPreferences.preferencesMap.toList.success
     }
   }
 
@@ -657,10 +662,10 @@ private object NetBeans extends NetBeansSDTConfig {
     if (filename contains "..") {
       val parts = (filename split "[\\/]+").toList
       def fix(parts: List[String], result: String): String = parts match {
-        case Nil => result
-        case a :: ".." :: rest => fix(rest, result)
+        case Nil                         => result
+        case a :: ".." :: rest           => fix(rest, result)
         case a :: rest if result.isEmpty => fix(rest, a)
-        case a :: rest => fix(rest, result + java.io.File.separator + a)
+        case a :: rest                   => fix(rest, result + java.io.File.separator + a)
       }
       fix(parts, "")
     } else filename

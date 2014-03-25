@@ -191,11 +191,11 @@ trait NetBeansPlugin {
         <classpathentry kind="output" path={ path }/>
     }
 
-    case class ScalariformEntry(k: String, v: Any) extends NetBeansClasspathEntry {
+    case class ScalariformEntry(scope: String, k: String, v: Any) extends NetBeansClasspathEntry {
       def toXml =
-        <scalariform key={ k } value={ "" + v }/>
+        <scalariform key={ k } value={ "" + v } scope={ scope }/>
       def toXmlNetBeans =
-        <scalariform key={ k } value={ "" + v }/>
+        <scalariform key={ k } value={ "" + v } scope={ scope }/>
     }
   }
 
