@@ -54,7 +54,7 @@ object Build extends Build {
         //   if (CrossVersion.isStable(sbtVersion)) CrossVersion.binarySbtVersion(sbtVersion) else sbtVersion
         // },
         scalaVersion <<= (sbtVersion in GlobalScope) {
-          case sbt013 if sbt013.startsWith("0.13.") => "2.10.3"
+          case sbt013 if sbt013.startsWith("0.13.") => "2.10.4"
           case sbt012 if sbt012.startsWith("0.12.") => "2.9.3"
           case _                                    => "2.9.3"
         },
