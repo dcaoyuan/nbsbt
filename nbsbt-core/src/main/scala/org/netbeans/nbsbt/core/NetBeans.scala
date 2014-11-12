@@ -544,8 +544,7 @@ private object NetBeans extends NetBeansSDTConfig {
     project: ResolvedProject,
     state: State): Validation[Seq[Prj]] = {
     val projects: Seq[Validation[Prj]] = project.aggregate collect {
-      case prj =>
-        val prjRef = prj.project
+      case prjRef if isUnderLocal(prjRef, state) =>
         val name = setting(Keys.name in prjRef, state)
         val baseDir = setting(Keys.baseDirectory in prjRef, state)
         (name |@| baseDir |@| Success(None))(Prj)
@@ -553,6 +552,11 @@ private object NetBeans extends NetBeansSDTConfig {
     val projectsSeq = projects.toList.sequence
     state.log.debug("Project aggregate: %s".format(projectsSeq))
     projectsSeq
+  }
+
+  def isUnderLocal(prjRef: ProjectRef, state: State): Boolean = {
+    val tryName = setting(Keys.name in prjRef, state)
+    tryName.isSuccess
   }
 
   def isInConfiguration(
