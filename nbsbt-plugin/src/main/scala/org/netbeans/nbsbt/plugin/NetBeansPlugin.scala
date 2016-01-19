@@ -18,8 +18,8 @@
 
 package org.netbeans.nbsbt.plugin
 
-import org.netbeans.nbsbt.core.{ NetBeansPlugin => CoreNetBeansPlugin }
-import sbt.{ Plugin, Setting }
+import org.netbeans.nbsbt.core.{NetBeansPlugin => CoreNetBeansPlugin}
+import sbt.{Plugin, Setting}
 
 object NetBeansPlugin extends Plugin with CoreNetBeansPlugin {
   override def settings: Seq[Setting[_]] = CoreNetBeansPlugin.netbeansSettings

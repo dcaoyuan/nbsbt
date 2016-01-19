@@ -40,7 +40,7 @@ import sbt.{
 }
 import sbt.Load.BuildStructure
 import sbt.complete.Parser
-import scalaz.{ Equal, NonEmptyList, Validation => ScalazValidation }
+import scalaz.{Equal, NonEmptyList, Validation => ScalazValidation}
 import scalaz.Scalaz._
 
 package object core {
