@@ -5,6 +5,11 @@ import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
+import sbtrelease._
+import ReleasePlugin._
+import ReleaseStateTransformations._
+
+
 object Build extends Build {
 
   lazy val root = Project(
@@ -21,7 +26,7 @@ object Build extends Build {
       libraryDependencies ++= Seq(
         "org.scalaz" %% "scalaz-core" % "7.0.2",
         "org.scalaz" %% "scalaz-effect" % "7.0.2"),
-      addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.2.0")))
+      addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.6.0")))
 
   lazy val nbsbtPlugin = Project(
     "nbsbt-plugin",
@@ -33,7 +38,7 @@ object Build extends Build {
     Defaults.defaultSettings ++
       formatSettings ++
       scriptedSettings ++
-      releaseSettings ++
+      //releaseSettings ++
       Seq(
         organization := "org.netbeans.nbsbt",
         // version is defined in version.sbt in order to support sbt-release
@@ -63,7 +68,12 @@ object Build extends Build {
         },
         publishArtifact in (Compile, packageDoc) := false,
         publishArtifact in (Compile, packageSrc) := false,
-        scriptedLaunchOpts ++= List("-Xmx1024m", "-XX:MaxPermSize=256M"))
+        scriptedLaunchOpts ++= List("-Xmx1024m", "-XX:MaxPermSize=256M"),
+
+        resolvers := Seq(
+          "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+          "sonatype-releases" at "https://oss.sonatype.org/content/repositories/releases/")
+      )
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,
