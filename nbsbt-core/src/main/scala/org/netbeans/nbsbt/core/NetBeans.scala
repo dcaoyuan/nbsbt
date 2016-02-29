@@ -653,8 +653,8 @@ private object NetBeans extends NetBeansSDTConfig {
 
   // Note: Relativize doesn't take into account "..", so we need to normalize *first* (yippie), then check for relativize.
   // Also - Instead of failure we should generate a "link".
-  def relativize(baseDirectory: File, file: File): String =
-    IO.relativize(baseDirectory, file).get
+  def relativize(baseDirectory: File, file: File): Option[String] =
+    IO.relativize(baseDirectory, file)
 
   def relativizeOpt(baseDirectory: File, file: File): Option[String] =
     IO.relativize(baseDirectory, normalize(file))

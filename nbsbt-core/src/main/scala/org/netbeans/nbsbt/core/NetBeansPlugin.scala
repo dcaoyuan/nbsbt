@@ -140,18 +140,30 @@ trait NetBeansPlugin {
 
   object NetBeansClasspathEntry {
 
-    case class Src(scope: String, path: String, output: String, managed: Boolean) extends NetBeansClasspathEntry {
+    case class Src(scope: String, path: Option[String], output: Option[String], managed: Boolean) extends NetBeansClasspathEntry {
       def toXml =
-        <classpathentry kind="src" path={ path } output={ output }/>
+        if (path.isDefined && output.isDefined)
+          <classpathentry kind="src" path={ path.get } output={ output.get }/>
+        else
+          <!-- classpathentry kind="src" scope = { scope } / -->
       def toXmlNetBeans =
-        <classpathentry kind="src" path={ path } output={ output } scope={ scope } managed={ managed.toString }/>
+        if (path.isDefined && output.isDefined)
+          <classpathentry kind="src" path={ path.get } output={ output.get } scope={ scope } managed={ managed.toString }/>
+        else
+          <!-- classpathentry kind="src" scope={ scope } managed={ managed.toString }/ -->
     }
 
-    case class Link(scope: String, name: String, output: String, managed: Boolean) extends NetBeansClasspathEntry {
+    case class Link(scope: String, name: String, output: Option[String], managed: Boolean) extends NetBeansClasspathEntry {
       def toXml =
-        <classpathentry kind="link" name={ name } output={ output }/>
+        if (output.isDefined)
+          <classpathentry kind="link" name={ name } output={ output.get }/>
+        else
+          <!-- classpathentry kind="link" name={ name }/ -->
       def toXmlNetBeans =
-        <classpathentry kind="src" name={ name } output={ output } scope={ scope } managed={ managed.toString }/>
+        if (output.isDefined)
+          <classpathentry kind="src" name={ name } output={ output.get } scope={ scope } managed={ managed.toString }/>
+        else
+          <!-- classpathentry kind="src" name={ name } scope={ scope } managed={ managed.toString }/ -->
     }
 
     case class Lib(scope: String, path: String, sourcePath: Option[String] = None) extends NetBeansClasspathEntry {
