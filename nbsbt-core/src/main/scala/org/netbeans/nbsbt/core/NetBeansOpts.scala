@@ -29,4 +29,6 @@ private object NetBeansOpts {
   val UseProjectId = "use-project-id"
 
   val GenNetBeans = "gen-netbeans"
+
+  val WithBundledScalaContainers = "with-bundled-scala-containers"
 }
