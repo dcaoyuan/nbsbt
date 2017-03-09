@@ -21,7 +21,7 @@ object Build extends Build {
       libraryDependencies ++= Seq(
         "org.scalaz" %% "scalaz-core" % "7.0.2",
         "org.scalaz" %% "scalaz-effect" % "7.0.2"),
-      addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.2.0")))
+      addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.6.0")))
 
   lazy val nbsbtPlugin = Project(
     "nbsbt-plugin",
