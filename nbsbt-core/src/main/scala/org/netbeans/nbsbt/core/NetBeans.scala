@@ -27,7 +27,7 @@ import NetBeansPlugin.{
   NetBeansExecutionEnvironment,
   NetBeansKeys
 }
-import java.io.{ FileWriter, Writer }
+import java.io.{FileWriter, Writer}
 import java.util.Properties
 import sbt.{
   Attributed,
@@ -53,9 +53,9 @@ import sbt.{
   richFile
 }
 import sbt.complete.Parser
-import scala.xml.{ Node, PrettyPrinter }
-import scala.xml.transform.{ RewriteRule, RuleTransformer }
-import scalaz.{ Failure, NonEmptyList, Success }
+import scala.xml.{Node, PrettyPrinter}
+import scala.xml.transform.{RewriteRule, RuleTransformer}
+import scalaz.{Failure, NonEmptyList, Success}
 import scalariform.formatter.preferences.PreferenceDescriptor
 import scalaz.Scalaz._
 import scalaz.effect._
@@ -107,15 +107,17 @@ private object NetBeans extends NetBeansSDTConfig {
       (args get SkipParents).asInstanceOf[Option[Boolean]] getOrElse skipParents(ThisBuild, state),
       (args get WithSource).asInstanceOf[Option[Boolean]],
       (args get GenNetBeans).asInstanceOf[Option[Boolean]] getOrElse true,
-      state).fold(onFailure(state), onSuccess(state))
+      state
+    ).fold(onFailure(state), onSuccess(state))
   }
 
   def handleProjects(
     executionEnvironmentArg: Option[NetBeansExecutionEnvironment.Value],
-    skipParents: Boolean,
-    withSourceArg: Option[Boolean],
-    genNetBeans: Boolean,
-    state: State): Validation[IO[Seq[String]]] = {
+    skipParents:             Boolean,
+    withSourceArg:           Option[Boolean],
+    genNetBeans:             Boolean,
+    state:                   State
+  ): Validation[IO[Seq[String]]] = {
     val effects = for {
       ref <- structure(state).allProjectRefs
       project <- Project.getProject(ref, structure(state)) if !skip(ref, project, skipParents, state)
@@ -144,7 +146,9 @@ private object NetBeans extends NetBeansSDTConfig {
           relativizeLibs(ref, state),
           builderAndNatures(projectFlavor(ref, state)),
           genNetBeans,
-          state))
+          state
+        )
+      )
     }
 
     effects.toList.sequence[Validation, IO[String]].map((list: List[IO[String]]) => list.toStream.sequence.map(_.toList))
@@ -166,7 +170,8 @@ private object NetBeans extends NetBeansSDTConfig {
 
   def onFailure(state: State)(errors: NonEmptyList[String]): State = {
     state.log.error(
-      "Could not create NetBeans project files:%s%s".format(NewLine, errors.list mkString NewLine))
+      "Could not create NetBeans project files:%s%s".format(NewLine, errors.list mkString NewLine)
+    )
     state
   }
 
@@ -178,7 +183,9 @@ private object NetBeans extends NetBeansSDTConfig {
       state.log.info(
         "Successfully created NetBeans project files for project(s):%s%s".format(
           NewLine,
-          names mkString NewLine))
+          names mkString NewLine
+        )
+      )
     state
   }
 
@@ -187,30 +194,33 @@ private object NetBeans extends NetBeansSDTConfig {
 
   def mapConfigurations[A](
     configurations: Seq[Configuration],
-    f: Configuration => Validation[Seq[A]]): Validation[List[(Configuration, Seq[A])]] = {
+    f:              Configuration => Validation[Seq[A]]
+  ): Validation[List[(Configuration, Seq[A])]] = {
     def scoped(c: Configuration): Validation[(Configuration, Seq[A])] = f(c) fold (e => Failure(e), s => Success((c, s.distinct)))
     (configurations map scoped).toList.sequence
   }
 
   def handleProject(
-    jreContainer: String,
-    preTasks: Seq[(TaskKey[_], ProjectRef)],
-    relativizeLibs: Boolean,
+    jreContainer:      String,
+    preTasks:          Seq[(TaskKey[_], ProjectRef)],
+    relativizeLibs:    Boolean,
     builderAndNatures: (String, Seq[String]),
-    genNetBeans: Boolean,
-    state: State)(
-      classpathTransformers: Seq[RewriteRule],
-      projectTransformers: Seq[RewriteRule],
-      name: String,
-      projectId: String,
-      buildDirectory: File,
-      baseDirectory: File,
-      srcDirectories: Seq[(Configuration, Seq[(File, File, Boolean)])],
-      scalacOptions: Seq[(String, String)],
-      scalariformPreferences: Seq[(Configuration, Seq[(PreferenceDescriptor[_], Any)])],
-      externalDependencies: Seq[(Configuration, Seq[Lib])],
-      projectDependencies: Seq[(Configuration, Seq[Prj])],
-      projectAggregate: Seq[Prj]): IO[String] = {
+    genNetBeans:       Boolean,
+    state:             State
+  )(
+    classpathTransformers:  Seq[RewriteRule],
+    projectTransformers:    Seq[RewriteRule],
+    name:                   String,
+    projectId:              String,
+    buildDirectory:         File,
+    baseDirectory:          File,
+    srcDirectories:         Seq[(Configuration, Seq[(File, File, Boolean)])],
+    scalacOptions:          Seq[(String, String)],
+    scalariformPreferences: Seq[(Configuration, Seq[(PreferenceDescriptor[_], Any)])],
+    externalDependencies:   Seq[(Configuration, Seq[Lib])],
+    projectDependencies:    Seq[(Configuration, Seq[Prj])],
+    projectAggregate:       Seq[Prj]
+  ): IO[String] = {
     for {
       _ <- executePreTasks(preTasks, state)
       n <- io(name)
@@ -229,7 +239,8 @@ private object NetBeans extends NetBeansSDTConfig {
         jreContainer,
         scalariformPreferences,
         genNetBeans,
-        state)
+        state
+      )
       _ <- if (genNetBeans) saveXml(baseDirectory / ".classpath_nb", cp) else saveXml(baseDirectory / ".classpath", new RuleTransformer(classpathTransformers: _*)(cp))
       _ <- if (genNetBeans) io(()) else saveProperties(baseDirectory / ".settings" / "org.scala-ide.sdt.core.prefs", scalacOptions)
     } yield n
@@ -280,19 +291,20 @@ private object NetBeans extends NetBeansSDTConfig {
 
   def classpath(
     //classpathEntryTransformer: Seq[NetBeansClasspathEntry] => Seq[NetBeansClasspathEntry],
-    name: String,
-    projectId: String,
-    buildDirectory: File,
-    baseDirectory: File,
-    relativizeLibs: Boolean,
-    srcDirectories: Seq[(Configuration, Seq[(File, File, Boolean)], Seq[(File, String, File, Boolean)])],
-    externalDependencies: Seq[(Configuration, Seq[Lib])],
-    projectDependencies: Seq[(Configuration, Seq[Prj])],
-    projectAggregate: Seq[Prj],
-    jreContainer: String,
+    name:                   String,
+    projectId:              String,
+    buildDirectory:         File,
+    baseDirectory:          File,
+    relativizeLibs:         Boolean,
+    srcDirectories:         Seq[(Configuration, Seq[(File, File, Boolean)], Seq[(File, String, File, Boolean)])],
+    externalDependencies:   Seq[(Configuration, Seq[Lib])],
+    projectDependencies:    Seq[(Configuration, Seq[Prj])],
+    projectAggregate:       Seq[Prj],
+    jreContainer:           String,
     scalariformPreferences: Seq[(Configuration, Seq[(PreferenceDescriptor[_], Any)])],
-    genNetBeans: Boolean,
-    state: State): IO[Node] = {
+    genNetBeans:            Boolean,
+    state:                  State
+  ): IO[Node] = {
     val srcEntriesIoSeq =
       for ((config, dirs, links) <- srcDirectories; (dir, output, managed) <- dirs) yield srcEntry(config, baseDirectory, dir, output, managed, genNetBeans, state)
     val srcLinkEntriesIoSeq =
@@ -314,47 +326,53 @@ private object NetBeans extends NetBeansSDTConfig {
   }
 
   def srcLink(
-    config: Configuration,
-    baseDirectory: File,
-    linkedDir: File,
-    linkName: String,
+    config:         Configuration,
+    baseDirectory:  File,
+    linkedDir:      File,
+    linkName:       String,
     classDirectory: File,
-    managed: Boolean,
-    genNetBeans: Boolean,
-    state: State): IO[NetBeansClasspathEntry.Link] =
+    managed:        Boolean,
+    genNetBeans:    Boolean,
+    state:          State
+  ): IO[NetBeansClasspathEntry.Link] =
     io {
       if (!linkedDir.exists && !genNetBeans) linkedDir.mkdirs()
       NetBeansClasspathEntry.Link(
         config.name,
         linkName,
         relativize(baseDirectory, classDirectory),
-        managed)
+        managed
+      )
     }
 
   def srcEntry(
-    config: Configuration,
-    baseDirectory: File,
-    srcDirectory: File,
+    config:         Configuration,
+    baseDirectory:  File,
+    srcDirectory:   File,
     classDirectory: File,
-    managed: Boolean,
-    genNetBeans: Boolean,
-    state: State): IO[NetBeansClasspathEntry.Src] =
+    managed:        Boolean,
+    genNetBeans:    Boolean,
+    state:          State
+  ): IO[NetBeansClasspathEntry.Src] =
     io {
       if (!srcDirectory.exists() && !genNetBeans) srcDirectory.mkdirs()
       NetBeansClasspathEntry.Src(
         config.name,
         relativize(baseDirectory, srcDirectory),
         relativize(baseDirectory, classDirectory),
-        managed)
+        managed
+      )
     }
 
   def libEntry(
-    config: Configuration,
+    config:         Configuration,
     buildDirectory: File,
-    baseDirectory: File,
+    baseDirectory:  File,
     relativizeLibs: Boolean,
-    state: State)(
-      lib: Lib): NetBeansClasspathEntry.Lib = {
+    state:          State
+  )(
+    lib: Lib
+  ): NetBeansClasspathEntry.Lib = {
     def path(file: File) = {
       val relativizedBase =
         if (buildDirectory === baseDirectory) Some(".") else IO.relativize(buildDirectory, baseDirectory)
@@ -363,31 +381,38 @@ private object NetBeans extends NetBeansSDTConfig {
         "%s%s%s".format(
           base split FileSepPattern map (part => if (part != ".") ".." else part) mkString FileSep,
           FileSep,
-          file))
+          file
+        ))
       if (relativizeLibs) relativized getOrElse file.getAbsolutePath else file.getAbsolutePath
     }
     NetBeansClasspathEntry.Lib(config.name, path(lib.binary), lib.source map path)
   }
 
   def projectEntry(
-    config: Configuration,
+    config:        Configuration,
     baseDirectory: File,
-    state: State)(
-      prj: Prj): NetBeansClasspathEntry.Project = {
+    state:         State
+  )(
+    prj: Prj
+  ): NetBeansClasspathEntry.Project = {
     NetBeansClasspathEntry.Project(
       config.name,
       prj.name,
       prj.baseDirectory.getAbsolutePath,
-      prj.classDirectory map (_.getAbsolutePath) getOrElse "")
+      prj.classDirectory map (_.getAbsolutePath) getOrElse ""
+    )
   }
 
   def aggProjectEntry(
     baseDirectory: File,
-    state: State)(
-      prj: Prj): NetBeansClasspathEntry.AggProject = {
+    state:         State
+  )(
+    prj: Prj
+  ): NetBeansClasspathEntry.AggProject = {
     NetBeansClasspathEntry.AggProject(
       prj.name,
-      prj.baseDirectory.getAbsolutePath)
+      prj.baseDirectory.getAbsolutePath
+    )
   }
 
   def jreContainer(executionEnvironment: Option[NetBeansExecutionEnvironment.Value]): String =
@@ -420,11 +445,13 @@ private object NetBeans extends NetBeansSDTConfig {
     settingValidation(Keys.target in ref, state)
 
   def srcDirectories(
-    ref: Reference,
-    createSrc: NetBeansCreateSrc.ValueSet,
+    ref:            Reference,
+    createSrc:      NetBeansCreateSrc.ValueSet,
     netbeansOutput: Option[String],
-    state: State)(
-      configuration: Configuration): Validation[Seq[(File, File, Boolean)]] = {
+    state:          State
+  )(
+    configuration: Configuration
+  ): Validation[Seq[(File, File, Boolean)]] = {
     import NetBeansCreateSrc._
     val classDirectory = netbeansOutput match {
       case Some(name) => baseDirectory(ref, state) map (new File(_, name))
@@ -439,7 +466,8 @@ private object NetBeans extends NetBeansSDTConfig {
       dirs(ValueSet(Unmanaged, Source), Keys.unmanagedSourceDirectories, false),
       dirs(ValueSet(Managed, Source), Keys.managedSourceDirectories, true),
       dirs(ValueSet(Unmanaged, Resource), Keys.unmanagedResourceDirectories, false),
-      dirs(ValueSet(Managed, Resource), Keys.managedResourceDirectories, true)) reduceLeft (_ +++ _)
+      dirs(ValueSet(Managed, Resource), Keys.managedResourceDirectories, true)
+    ) reduceLeft (_ +++ _)
   }
 
   def scalacOptions(ref: ProjectRef, state: State): Validation[Seq[(String, String)]] =
@@ -463,7 +491,8 @@ private object NetBeans extends NetBeansSDTConfig {
    *   > show compile:scalariformPreferences
    */
   def scalariformPreferences(ref: ProjectRef, state: State)(
-    configuration: Configuration): Validation[Seq[(PreferenceDescriptor[_], Any)]] = {
+    configuration: Configuration
+  ): Validation[Seq[(PreferenceDescriptor[_], Any)]] = {
     (ScalariformKeys.preferences in (ref, configuration)) get structure(state).data match {
       case Some(a) => a.preferencesMap.toList.success
       case None    => FormattingPreferences.preferencesMap.toList.success
@@ -471,10 +500,12 @@ private object NetBeans extends NetBeansSDTConfig {
   }
 
   def externalDependencies(
-    ref: ProjectRef,
+    ref:        ProjectRef,
     withSource: Boolean,
-    state: State)(
-      configuration: Configuration): Validation[Seq[Lib]] = {
+    state:      State
+  )(
+    configuration: Configuration
+  ): Validation[Seq[Lib]] = {
     def moduleToFile(key: TaskKey[UpdateReport], p: (Artifact, File) => Boolean = (_, _) => true) =
       evaluateTask(key in configuration, ref, state) map { updateReport =>
         val moduleToFile =
@@ -507,15 +538,19 @@ private object NetBeans extends NetBeansSDTConfig {
       "External dependencies for configuration '%s' and withSource '%s': %s".format(
         configuration,
         withSource,
-        externalDependencies))
+        externalDependencies
+      )
+    )
     externalDependencies
   }
 
   def projectDependencies(
-    ref: ProjectRef,
+    ref:     ProjectRef,
     project: ResolvedProject,
-    state: State)(
-      configuration: Configuration): Validation[Seq[Prj]] = {
+    state:   State
+  )(
+    configuration: Configuration
+  ): Validation[Seq[Prj]] = {
     val projectDependencies: Seq[Validation[Prj]] = project.dependencies collect {
       case dependency if isInConfiguration(configuration, ref, dependency, state) =>
         val dependencyRef = dependency.project
@@ -530,9 +565,10 @@ private object NetBeans extends NetBeansSDTConfig {
   }
 
   def projectAggregate(
-    ref: ProjectRef,
+    ref:     ProjectRef,
     project: ResolvedProject,
-    state: State): Validation[Seq[Prj]] = {
+    state:   State
+  ): Validation[Seq[Prj]] = {
     val projects: Seq[Validation[Prj]] = project.aggregate collect {
       case prjRef if isUnderLocal(prjRef, state) =>
         val name = settingValidation(Keys.name in prjRef, state)
@@ -565,14 +601,16 @@ private object NetBeans extends NetBeansSDTConfig {
 
   def isInConfiguration(
     configuration: Configuration,
-    ref: ProjectRef,
-    dependency: ClasspathDep[ProjectRef],
-    state: State): Boolean = {
+    ref:           ProjectRef,
+    dependency:    ClasspathDep[ProjectRef],
+    state:         State
+  ): Boolean = {
     val map = Classpaths.mapped(
       dependency.configuration,
       Configurations.names(Classpaths.getConfigurations(ref, structure(state).data)),
       Configurations.names(Classpaths.getConfigurations(dependency.project, structure(state).data)),
-      "compile", "*->compile")
+      "compile", "*->compile"
+    )
     !map(configuration.name).isEmpty
   }
 
@@ -661,8 +699,8 @@ private object NetBeans extends NetBeansSDTConfig {
 
   // Note: Relativize doesn't take into account "..", so we need to normalize *first* (yippie), then check for relativize.
   // Also - Instead of failure we should generate a "link".
-  def relativize(baseDirectory: File, file: File): String =
-    IO.relativize(baseDirectory, file).get
+  def relativize(baseDirectory: File, file: File): Option[String] =
+    IO.relativize(baseDirectory, file)
 
   def relativizeOpt(baseDirectory: File, file: File): Option[String] =
     IO.relativize(baseDirectory, normalize(file))
@@ -685,11 +723,12 @@ private object NetBeans extends NetBeansSDTConfig {
 }
 
 private case class Content(
-  name: String,
-  dir: File,
-  project: Node,
-  classpath: Node,
-  scalacOptions: Seq[(String, String)])
+  name:          String,
+  dir:           File,
+  project:       Node,
+  classpath:     Node,
+  scalacOptions: Seq[(String, String)]
+)
 
 private case class Lib(binary: File)(val source: Option[File])
 private case class Prj(name: String, baseDirectory: File, classDirectory: Option[File])

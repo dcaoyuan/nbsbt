@@ -18,8 +18,8 @@
 
 package org.netbeans.nbsbt.plugin
 
-import org.netbeans.nbsbt.core.{ NetBeansPlugin => NetBeansCorePlugin }
-import sbt.{ AutoPlugin, Setting }
+import org.netbeans.nbsbt.core.{NetBeansPlugin => NetBeansCorePlugin}
+import sbt.{AutoPlugin, Setting}
 
 object NetBeansPlugin extends AutoPlugin {
   override def requires = sbt.plugins.JvmPlugin
