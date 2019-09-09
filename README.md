@@ -32,7 +32,7 @@ This project is derived from [https://github.com/typesafehub/sbteclipse](https:/
 1. Add nbsbt to your plugin definition file. You can use either the global one at ~/.sbt/0.13/plugins/plugins.sbt or the project-specific one at PROJECT_DIR/project/plugins.sbt:
 ```
         // for sbt 0.13.x
-        addSbtPlugin("org.netbeans.nbsbt" % "nbsbt-plugin" % "1.1.4")
+        addSbtPlugin("org.netbeans.nbsbt" % "nbsbt-plugin" % "1.1.5")
         // for sbt 0.12.x
         addSbtPlugin("org.netbeans.nbsbt" % "nbsbt-plugin" % "1.0.2")
 ```
