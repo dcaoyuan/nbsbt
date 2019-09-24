@@ -36,15 +36,46 @@ import scala.xml.{Attribute, Elem, MetaData, Node, Null, Text}
 import scala.xml.transform.RewriteRule
 import scalariform.formatter.preferences.IFormattingPreferences
 
-object NetBeansPlugin extends NetBeansPlugin
+object NetBeansPlugin {
 
-trait NetBeansPlugin {
-
+  /** These settings are injected into individual projects. */
   def netbeansSettings: Seq[Setting[_]] = {
     import NetBeansKeys._
     Seq(
       commandName := "netbeans",
-      commands <+= (commandName)(NetBeans.netbeansCommand)
+      commands <+= (commandName)(NetBeans.netbeansCommand),
+      executionEnvironment := None,
+      configurations := Set(Configurations.Compile, Configurations.Test),
+      projectFlavor := NetBeansProjectFlavor.Scala,
+      withBundledScalaContainers := projectFlavor.value.id == NetBeansProjectFlavor.Scala.id,
+      classpathTransformerFactories := defaultClasspathTransformerFactories(withBundledScalaContainers.value),
+      projectTransformerFactories := Seq(NetBeansRewriteRuleTransformerFactory.Identity),
+      createSrc := NetBeansCreateSrc.Default,
+      netbeansOutput := None,
+      preTasks := Seq(),
+      relativizeLibs := true,
+      skipParents := true,
+      withSource := false,
+      skipProject := false
+    )
+  }
+
+  def defaultClasspathTransformerFactories(withBundledScalaContainers: Boolean) = {
+    if (withBundledScalaContainers)
+      Seq(NetBeansRewriteRuleTransformerFactory.ClasspathDefault)
+    else
+      Seq(NetBeansRewriteRuleTransformerFactory.Identity)
+  }
+
+  /** These settings are injected into the "ThisBuild" scope of sbt, i.e. global acrosss projects. */
+  def buildNetBeansSettings: Seq[Setting[_]] = {
+    import NetBeansKeys._
+    Seq(
+      skipParents := true,
+      // Typically, this will be overridden for each project by the project level default of false. However, if a
+      // project disables the EclipsePlugin, the project level default won't be set, and so it will fall back to this
+      // build level setting, which means the project will be skipped.
+      skipProject := true
     )
   }
 
@@ -64,6 +95,11 @@ trait NetBeansPlugin {
     val withSource: SettingKey[Boolean] = SettingKey(
       prefix(WithSource),
       "Download and link sources for library dependencies?"
+    )
+
+    val withBundledScalaContainers: SettingKey[Boolean] = SettingKey(
+      prefix(WithBundledScalaContainers),
+      "Let the generated project use the bundled Scala library of the ScalaIDE plugin"
     )
 
     val useProjectId: SettingKey[Boolean] = SettingKey(

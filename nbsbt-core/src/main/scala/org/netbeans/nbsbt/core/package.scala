@@ -60,12 +60,6 @@ package object core {
     (Space ~> key ~ ("=" ~> ("true" | "false"))) map { case (k, v) => k -> v.toBoolean }
   }
 
-  def setting[A](key: SettingKey[A], state: State): Validation[A] =
-    key get structure(state).data match {
-      case Some(a) => a.success
-      case None    => "Undefined setting '%s'!".format(key.key).failNel
-    }
-
   def evaluateTask[A](key: TaskKey[A], ref: ProjectRef, state: State): Validation[A] =
     EvaluateTask(structure(state), key, state, ref, EvaluateTask defaultConfig state) match {
       case Some((_, Value(a))) => a.success
@@ -77,5 +71,5 @@ package object core {
 
   def structure(state: State): BuildStructure = extracted(state).structure
 
-  type Validation[A] = ScalazValidation[NonEmptyList[String], A]
+  type Validation[A] = scalaz.Validation[NonEmptyList[String], A]
 }
